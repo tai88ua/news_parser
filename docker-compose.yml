@@ -1,0 +1,12 @@
+version: '3'
+services:
+  python:
+    build:
+       context: .
+       dockerfile: python-core/Dockerfile
+    restart: always
+    volumes:
+      - ./app:/usr/src/app
+    user: "1000:1000"
+    container_name: python_app
+
