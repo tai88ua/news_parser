@@ -1,2 +1,9 @@
 requests
 lxml
+python-dotenv
+bs4
+pandas
+langchain
+langchain_core
+langchain_ollama
+openpyxl

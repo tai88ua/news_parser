@@ -1,0 +1,111 @@
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+from langchain_core.prompts import PromptTemplate
+#from langchain_community.llms import Ollama
+from langchain_ollama import ChatOllama
+from langchain.chains import LLMChain
+#from langchain.chat_models import ChatOpenAI  # для GPT-3.5/4
+import json
+import os
+from pathlib import Path
+
+headers = {
+    'User-Agent': 'Mozilla/5.0',
+    'Accept-Language': 'en-US,en;q=0.5'
+}
+
+link = 'https://www.artificialintelligence-news.com/feed/'
+
+### load page
+res = requests.get(link, headers=headers)
+
+
+bs = BeautifulSoup(res.content, "xml")
+items = bs.find_all('item')
+
+path_to_cache  = 'data.json'
+path_to_result = 'parsed_data.xlsx'
+
+### загружаем кеш
+
+def load_cache(filename):
+
+    data_cache = {}
+
+    # Проверка на существование файла
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            data_cache = json.load(f)
+
+    return data_cache
+
+
+
+
+data_loaded = load_cache(path_to_cache)
+
+
+####
+
+
+
+data = []
+
+if os.path.exists(path_to_result):
+    df = pd.read_excel(path_to_result)
+    data = df.to_dict(orient="records")
+
+
+for item in items:
+
+  title = item.title.string if item.title else ""
+
+  post = {
+        'title': item.title.string,
+        'summary' : '',
+        'link': item.link.string ,
+        'cta': "Попробовать аналог у нас → ResearchBot Pro",
+        'tags': [],
+        'source': "ArtificialIntelligence-News",
+        'publishedAt' : item.pubDate.string,
+        #'image' : ''
+  }
+
+
+  ## проверяем что мы такое уже добавляли все это
+  if item.link.string in data_loaded:
+      continue
+
+
+  cats = item.find_all('category')
+  categories = []
+  for cat in cats:
+    categories.append(cat.string)
+
+  post['tags'] = categories
+
+
+  content = item.find('content:encoded')
+  if content:
+      # парсим HTML внутри <content:encoded>
+    soup = BeautifulSoup(content.text, "html.parser")
+    clean_content = soup.get_text(" ", strip=True)  # все теги -> текст
+    post['summary'] = clean_content
+
+  data.append(post)
+  data_loaded[item.link.string] = item.link.string
+  #break
+
+#print(data)
+
+# превращаем в DataFrame
+df = pd.DataFrame(data)
+df.to_excel(path_to_result, index=False)
+
+### save cache
+with open(path_to_cache, "w", encoding="utf-8") as f:
+    json.dump(data_loaded, f, ensure_ascii=False, indent=4)
+
+
+
