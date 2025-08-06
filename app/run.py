@@ -6,9 +6,16 @@ from langchain_core.prompts import PromptTemplate
 from langchain_ollama import ChatOllama
 from langchain.chains import LLMChain
 #from langchain.chat_models import ChatOpenAI  # для GPT-3.5/4
+from langchain_openai import ChatOpenAI
 import json
 import os
-from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api_key = os.getenv("OPEN_API_KEY", "")
+#print(api_key)
+#exit()
 
 headers = {
     'User-Agent': 'Mozilla/5.0',
@@ -57,6 +64,40 @@ if os.path.exists(path_to_result):
     data = df.to_dict(orient="records")
 
 
+
+llm = ChatOpenAI(
+    model_name="gpt-4.1-nano",      # або "gpt-3.5-turbo"
+    temperature=0,         # бажано зменшити для парсингу
+    openai_api_key=api_key  # або використовуй через os.environ
+)
+
+prompt = PromptTemplate(
+    input_variables=["context"],
+    template="""
+        Ты переводчик текстов с английского на русский. 
+        Ниже — текст на английском:
+
+        {context}
+
+        Нужно на русском языке и в раза 3 компактней описать то что сказано в статье
+    
+    """
+)
+
+prompt2 = PromptTemplate(
+    input_variables=["context"],
+    template="""
+        Ты переводчик заголовков статей с английского на русский . 
+        Ниже — заголовков на английском:
+
+        {context}
+
+    """
+)
+
+chain = LLMChain(llm=llm, prompt=prompt)
+chain_title = LLMChain(llm=llm, prompt=prompt2)
+
 for item in items:
 
   title = item.title.string if item.title else ""
@@ -92,6 +133,12 @@ for item in items:
     soup = BeautifulSoup(content.text, "html.parser")
     clean_content = soup.get_text(" ", strip=True)  # все теги -> текст
     post['summary'] = clean_content
+
+  title_ru = chain_title.run({"context": title})
+  text_ru = chain.run({"context": clean_content})
+
+  post['title'] = title_ru
+  post['summary'] = text_ru
 
   data.append(post)
   data_loaded[item.link.string] = item.link.string

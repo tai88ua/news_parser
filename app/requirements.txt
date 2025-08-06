@@ -7,3 +7,4 @@ langchain
 langchain_core
 langchain_ollama
 openpyxl
+langchain-openai
