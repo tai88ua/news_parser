@@ -8,3 +8,6 @@ langchain_core
 langchain_ollama
 openpyxl
 langchain-openai
+gspread
+gspread_dataframe
+oauth2client

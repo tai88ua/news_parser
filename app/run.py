@@ -11,11 +11,35 @@ import json
 import os
 from dotenv import load_dotenv
 
+import gspread
+from gspread_dataframe import set_with_dataframe
+from oauth2client.service_account import ServiceAccountCredentials
+
 load_dotenv()
 
 api_key = os.getenv("OPEN_API_KEY", "")
 #print(api_key)
 #exit()
+
+
+
+# 1. Авторизація
+scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+client = gspread.authorize(creds)
+
+# 2. Відкриваємо Google Таблицю
+spreadsheet = client.open_by_key('1spG9Orhh6xEsfFjaGzR5Dm0bJDE9mwgZlwkmUXNyrWY')  # або по ID: client.open_by_key("ID")
+
+
+# 3. Вибираємо лист (sheet)
+worksheet = spreadsheet.worksheet("Sheet1")
+
+
+#print(worksheet)
+#exit()
+
+
 
 headers = {
     'User-Agent': 'Mozilla/5.0',
@@ -149,6 +173,11 @@ for item in items:
 # превращаем в DataFrame
 df = pd.DataFrame(data)
 df.to_excel(path_to_result, index=False)
+
+
+# 5. Запис Pandas DataFrame в Google Sheet
+worksheet.clear()  # Очистити перед оновленням (можна не викликати, якщо хочеш оновлювати вручну)
+set_with_dataframe(worksheet, df)
 
 ### save cache
 with open(path_to_cache, "w", encoding="utf-8") as f:
